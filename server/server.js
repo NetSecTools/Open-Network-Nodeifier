@@ -8,6 +8,8 @@ const server = http.createServer(app);
 const wss_agents = new WebSocket.Server({noServer: true});
 const wss_webapp = new WebSocket.Server({noServer: true});
 
+app.use(express.static(__dirname +'/public'))
+
 var packets = [];
 var sockets = new Set();
 
