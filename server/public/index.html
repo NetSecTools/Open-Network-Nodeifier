@@ -10,7 +10,7 @@
 </body>
 <script>
     var packets = document.getElementById('packets');
-    var socket = new WebSocket("ws://localhost:8000/ws/webapp");
+    var socket = new WebSocket("ws://"+ window.location.host +"/ws/webapp");
     socket.onopen = function(evt) {
         console.log('connection opened');
     }
@@ -27,7 +27,7 @@
     }
     function addPacket(data) {
         var node = document.createElement('li');
-        var txt = document.createTextNode(data);
+        var txt = document.createTextNode(JSON.stringify(data));
         node.appendChild(txt);
         packets.appendChild(node);
     }
