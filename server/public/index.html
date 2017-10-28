@@ -2,34 +2,24 @@
 <html>
 <head>
     <title>ON2 Dashboard</title>
+    <link rel='stylesheet' href='css/graphstyles.css' />
 </head>
 <body>
     <h1>ON2 Dashboard</h1>
     <p>Welcome</p>
     <ul id="packets"></ul>
-</body>
-<script>
-    var packets = document.getElementById('packets');
-    var socket = new WebSocket("ws://"+ window.location.host +"/ws/webapp");
-    socket.onopen = function(evt) {
-        console.log('connection opened');
-    }
-    socket.onerror = function(evt) {
-        console.log("connection error");
-    }
-    socket.onmessage = function(evt) {
-        var p = evt.data;
-        addPacket(JSON.parse(p));
-    }
+    
+    <div id="app">
+        <graph></graph>
+    </div>
+   
+    <script src="https://unpkg.com/vue"></script>
+    <script src="js/app.js"></script>
+    <script defer src="js/websocket.js"></script>
+    <script defer src="https://d3js.org/d3.v4.min.js"></script>
+    <script defer src="js/d3v4-brush-lite.js"></script>
+    <script defer src="js/d3v4-selectable-force-directed-graph.js"></script>
+    <script defer src="js/graph.js"></script>    
 
-    socket.onclose = function(evt) {
-        console.log("connection closed");
-    }
-    function addPacket(data) {
-        var node = document.createElement('li');
-        var txt = document.createTextNode(JSON.stringify(data));
-        node.appendChild(txt);
-        packets.appendChild(node);
-    }
-</script>
+</body>
 </html>

@@ -8,7 +8,8 @@ def capture_and_send(server='localhost:8000'):
     interfaces = os.listdir('/sys/class/net')
     capture = pyshark.LiveCapture(interface=interfaces)
 
-    # create our websocket to send data to server
+
+# create our websocket to send data to server
     ws = websocket.create_connection('ws://{}/ws/agents'.format(server))
     for packet in capture.sniff_continuously():
         #print('Just arrived:', packet.eth)

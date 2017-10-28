@@ -8,6 +8,8 @@ const server = http.createServer(app);
 const wss_agents = new WebSocket.Server({noServer: true});
 const wss_webapp = new WebSocket.Server({noServer: true});
 
+app.use(express.static(__dirname +'/public'))
+
 var packets = [];
 var sockets = new Set();
 
@@ -27,7 +29,7 @@ server.on('upgrade', (request, socket, head) => {
             wss_agents.emit('connection', ws);
             console.log("agent connection opened");
             ws.on('message', function(data){
-                // console.log('agents', data);
+                console.log('agents', data);
                 packets.push(data);
                 for(let item of sockets){
                     item.send(data);
