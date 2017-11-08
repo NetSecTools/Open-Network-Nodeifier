@@ -15,7 +15,7 @@ var sockets = new Set();
 
 app.get('/', function(req, res) {
     res.sendFile(__dirname+'/public/index.html');
-});
+ });
 
 app.get('/packets', function(req, res) {
     res.send(packets);
@@ -30,6 +30,9 @@ server.on('upgrade', (request, socket, head) => {
             console.log("agent connection opened");
             ws.on('message', function(data){
                 console.log('agents', data);
+
+                //PREPROCESS
+
                 packets.push(data);
                 for(let item of sockets){
                     item.send(data);
