@@ -29,9 +29,8 @@ server.on('upgrade', (request, socket, head) => {
             wss_agents.emit('connection', ws);
             console.log("agent connection opened");
             ws.on('message', function(data){
-                console.log('agents', data);
 
-                //PREPROCESS
+                console.error(data);
 
                 packets.push(data);
                 for(let item of sockets){
@@ -67,3 +66,4 @@ server.on('upgrade', (request, socket, head) => {
 server.listen(8000, function listening() {
     console.log('listening on 8000');
 });
+
