@@ -2,39 +2,50 @@ import websocket
 import json
 import pyshark
 import os
+import socket
+
+def get_agent_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+    except:
+        ip = socket.gethostbyname(socket.gethostname())
+    return ip
 
 def capture_and_send(server='localhost:8000'):
     # Assume Linux client
     interfaces = os.listdir('/sys/class/net')
+    myIP = get_agent_ip()
     capture = pyshark.LiveCapture(interface=interfaces)
-
+    print("Capturing on: {}\nDetected local address: {}\nServer Address: {}".format(interfaces, myIP, server))
 
 # create our websocket to send data to server
     ws = websocket.create_connection('ws://{}/ws/agents'.format(server))
     for packet in capture.sniff_continuously():
-        #print('Just arrived:', packet.eth)
         data = {}
-        if hasattr(packet, 'eth'):
+        # ignore pure layer 2 for now
+        if hasattr(packet, 'eth') and hasattr(packet, 'ip') and (packet.ip.src != myIP and packet.ip.dst != server.split(":")[0]):
             data['eth'] = {
                 "src": packet.eth.src,
                 "dst": packet.eth.dst
             }
-        if hasattr(packet, 'ip'):
             data['ip'] = {
                 "src": packet.ip.src,
                 "dst": packet.ip.dst,
                 "src_geo": packet.ip.geosrc_country if hasattr(packet.ip, 'geosrc_country') else "Unknown",
                 "dst_geo": packet.ip.geodst_country if hasattr(packet.ip, 'geodst_country') else "Unknown"
             }
-        if packet.transport_layer:
-            proto = packet.transport_layer
-            data['transport'] = {
-                "proto": proto,
-                "src": packet[proto].srcport,
-                "dst": packet[proto].dstport
-            }
-        data = json.dumps(data)
-        ws.send(data)
+            if packet.transport_layer:
+                proto = packet.transport_layer
+                data['transport'] = {
+                    "proto": proto,
+                    "src": packet[proto].srcport,
+                    "dst": packet[proto].dstport
+                }
+            data = json.dumps(data)
+            ws.send(data)
     ws.close()
 
 if __name__=="__main__":
@@ -60,3 +71,4 @@ Sample json being sent
   }
 }
 """
+
