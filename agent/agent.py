@@ -3,6 +3,7 @@ import json
 import pyshark
 import os
 import socket
+import sys
 
 def get_agent_ip():
     try:
@@ -14,10 +15,9 @@ def get_agent_ip():
         ip = socket.gethostbyname(socket.gethostname())
     return ip
 
-def capture_and_send(server='localhost:8000'):
+def capture_and_send(server='localhost:8000', myIP='localhost'):
     # Assume Linux client
     interfaces = os.listdir('/sys/class/net')
-    myIP = get_agent_ip()
     capture = pyshark.LiveCapture(interface=interfaces)
     print("Capturing on: {}\nDetected local address: {}\nServer Address: {}".format(interfaces, myIP, server))
 
@@ -49,7 +49,16 @@ def capture_and_send(server='localhost:8000'):
     ws.close()
 
 if __name__=="__main__":
-    capture_and_send()
+    myIP = get_agent_ip()
+    server = 'localhost:8000'
+    if len(sys.argv) > 1:
+        server = sys.argv[1]
+    try:
+        capture_and_send(server=server, myIP=myIP)
+    except ConnectionRefusedError:
+        print("Connection refused, is the server down?")
+    except BrokenPipeError:
+        print("Connection to server broken, is it down?")
 
 """
 Sample json being sent
