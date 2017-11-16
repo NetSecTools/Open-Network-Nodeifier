@@ -1,33 +1,8 @@
 ﻿//Update on websocket data
 
 var baseNodes = [
-    { id: "mammal", group: 0, label: "Mammals", level: 1 },
-    { id: "dog", group: 0, label: "Dogs", level: 2 },
-    { id: "cat", group: 0, label: "Cats", level: 2 },
-    { id: "fox", group: 0, label: "Foxes", level: 2 },
-    { id: "elk", group: 0, label: "Elk", level: 2 },
-    { id: "insect", group: 1, label: "Insects", level: 1 },
-    { id: "ant", group: 1, label: "Ants", level: 2 },
-    { id: "bee", group: 1, label: "Bees", level: 2 },
-    { id: "fish", group: 2, label: "Fish", level: 1 },
-    { id: "carp", group: 2, label: "Carp", level: 2 },
-    { id: "pike", group: 2, label: "Pikes", level: 2 }
 ]
 var baseLinks = [
-    { target: "mammal", source: "dog", strength: 0.7 },
-    { target: "mammal", source: "cat", strength: 0.7 },
-    { target: "mammal", source: "fox", strength: 0.7 },
-    { target: "mammal", source: "elk", strength: 0.7 },
-    { target: "insect", source: "ant", strength: 0.7 },
-    { target: "insect", source: "bee", strength: 0.7 },
-    { target: "fish", source: "carp", strength: 0.7 },
-    { target: "fish", source: "pike", strength: 0.7 },
-    { target: "cat", source: "elk", strength: 0.1 },
-    { target: "carp", source: "ant", strength: 0.1 },
-    { target: "elk", source: "bee", strength: 0.1 },
-    { target: "dog", source: "cat", strength: 0.1 },
-    { target: "fox", source: "ant", strength: 0.1 },
-    { target: "pike", source: "cat", strength: 0.1 }
 ]
 var nodes = [...baseNodes]
 var links = [...baseLinks]
@@ -182,6 +157,9 @@ function updateGraph() {
     textElements = textEnter.merge(textElements)
 }
 function updateSimulation() {
+    nodes = [...baseNodes]
+    links = [...baseLinks]
+
     updateGraph()
     simulation.nodes(nodes).on('tick', () => {
         nodeElements
@@ -224,7 +202,7 @@ socket.onclose = function (evt) {
       "id": "IPADDR",
       "group": 1
     },
-    "links": [  
+    "links": [
     {
     "source": "IPSOURCE",
         "target": "IPDEST",
@@ -232,12 +210,45 @@ socket.onclose = function (evt) {
     }
 */
 function addPacket(data) {
-    console.log(data)
-    // How to check if it is in json list   
+    // How to check if it is in json list
+    found = false;
+    for (x = 0; x < baseNodes.length; x++){
+        if (baseNodes[x].id === data.ip.src){
+            found = true;
+            break;
+        }
+    }
     //if it isn't push this into nodes
-    nodes.push({ "id": data.sourceip, "group": 1 })
+    if(!found){
+        var newNode = { "id": data.ip.src, "label": data.ip.src, "level": 1, "group": 0 };
+        baseNodes.push(newNode)
+    }
+    // How to check if it is in json list
+    found = false;
+    for (x = 0; x < baseNodes.length; x++){
+        if (baseNodes[x].id === data.ip.dst){
+            found = true;
+            break;
+        }
+    }
+    //if it isn't push this into nodes
+    if(!found){
+        var newNode = { "id": data.ip.dst, "label": data.ip.dst, "level": 1, "group": 0 };
+        baseNodes.push(newNode)
+    }
+    found = false
     //check if link is established
-    //add and update if not
+    for (x = 0; x < baseLinks.length; x++){
+        if (baseLinks[x].source === data.ip.src && baseLinks[x].target === data.ip.dst){
+            found = true
+            break
+        }
+    }
+    if (!found){
+        //add and update if not
+        baseLinks.push({"source" : data.ip.src, "target": data.ip.dst, "strength":  .1});
+    }
     //otherwise graph doesn't need to change
-
 }
+
+setInterval(updateSimulation, 15000);

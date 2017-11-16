@@ -30,7 +30,11 @@ server.on('upgrade', (request, socket, head) => {
             console.log("agent connection opened");
             ws.on('message', function(data){
 
-                console.error(data);
+                //Preprocess
+                //need, group, level, strength
+                data['group'] = 0
+                data['level'] = 1
+                data['strength'] = 1
 
                 packets.push(data);
                 for(let item of sockets){

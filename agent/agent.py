@@ -45,6 +45,7 @@ def capture_and_send(server='localhost:8000', myIP='localhost'):
                     "dst": packet[proto].dstport
                 }
             data = json.dumps(data)
+            print(data)
             ws.send(data)
     ws.close()
 
