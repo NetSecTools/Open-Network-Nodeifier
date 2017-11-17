@@ -1,5 +1,7 @@
 ﻿//Update on websocket data
 
+var tickValue = 15000
+
 var baseNodes = [
 ]
 var baseLinks = [
@@ -215,12 +217,13 @@ function addPacket(data) {
     for (x = 0; x < baseNodes.length; x++){
         if (baseNodes[x].id === data.ip.src){
             found = true;
+            baseNodes[x].expiration = data.expiration;
             break;
         }
     }
     //if it isn't push this into nodes
     if(!found){
-        var newNode = { "id": data.ip.src, "label": data.ip.src, "level": 1, "group": 0 };
+        var newNode = { "id": data.ip.src, "label": data.ip.src, "level": 1, "group": 0, "expiration" : data.expiration};
         baseNodes.push(newNode)
     }
     // How to check if it is in json list
@@ -251,4 +254,36 @@ function addPacket(data) {
     //otherwise graph doesn't need to change
 }
 
-setInterval(updateSimulation, 15000);
+function processTick(){
+    //Update expiration time
+    // -1 is never expire
+    console.log("I'm alive")
+    var x = baseNodes.length
+    while(x--){
+        if (baseNodes[x].expiration != -1 && !isNaN(baseNodes[x].expiration) ){
+        baseNodes[x].expiration -= tickValue/1000
+            if (baseNodes[x].expiration < 0){
+                var i = baseLinks.length;
+                while(i--){
+                    if (baseLinks[i].source.id === baseNodes[x].id || baseLinks[i].target.id === baseNodes[x].id){
+                        baseLinks.splice(i,i)
+                    }
+                }
+                console.log("Node")
+                console.log(JSON.parse(JSON.stringify(baseNodes[x])))
+                console.log("Before")
+                console.log(JSON.parse(JSON.stringify(baseNodes)))
+                baseNodes.splice(x,x)
+                console.log("After")
+                console.log(JSON.parse(JSON.stringify(baseNodes)))
+            }
+        }
+    }
+
+
+    //Update the graph
+    updateSimulation()
+}
+
+processTick()
+setInterval(processTick, tickValue);
