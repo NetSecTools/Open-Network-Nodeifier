@@ -30,13 +30,19 @@ server.on('upgrade', (request, socket, head) => {
             console.log("agent connection opened");
             ws.on('message', function(data){
                 data = JSON.parse(data);
+
+
                 //Preprocess
                 //need, group, level, strength
                 data['group'] = 0
                 data['level'] = 1
-                data['strength'] = 1
+                data['strength'] = .1
                 //seconds
                 data['expiration'] = 15
+                data['severity'] = 7
+                data['groupdst'] = 0
+                //seconds
+                data['expirationdst'] = 31
                 console.log(data)
                 data = JSON.stringify(data)
                 packets.push(data);

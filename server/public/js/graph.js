@@ -1,6 +1,8 @@
 ﻿//Update on websocket data
 
 var tickValue = 15000
+var severityForAlert = 7
+
 
 var baseNodes = [
 ]
@@ -57,8 +59,9 @@ var linkForce = d3
 var simulation = d3
     .forceSimulation()
     .force('link', linkForce)
-    .force('charge', d3.forceManyBody().strength(-120))
-    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('charge', d3.forceManyBody().strength(-600))
+    .force('centerX', d3.forceX(width / 2))
+    .force('centerY', d3.forceY(height /2))
 var dragDrop = d3.drag().on('start', function (node) {
     node.fx = node.x
     node.fy = node.y
@@ -70,8 +73,8 @@ var dragDrop = d3.drag().on('start', function (node) {
     if (!d3.event.active) {
         simulation.alphaTarget(0)
     }
-    node.fx = null
-    node.fy = null
+    node.fx = node.x
+    node.fy = node.y
 })
 // select node is called on every click
 // we either update the data according to the selection
@@ -83,7 +86,6 @@ function selectNode(selectedNode) {
         updateSimulation()
     } else {
         selectedId = selectedNode.id
-        updateData(selectedNode)
         updateSimulation()
     }
     var neighbors = getNeighbors(selectedNode)
@@ -104,10 +106,9 @@ function resetData() {
     links = baseLinks
 }
 // diffing and mutating the data
-function updateData(selectedNode) {
-    var neighbors = getNeighbors(selectedNode)
+function updateData() {
     var newNodes = baseNodes.filter(function (node) {
-        return neighbors.indexOf(node.id) > -1 || node.level === 1
+        return nodes.indexOf(node.id) === -1
     })
     var diff = {
         removed: nodes.filter(function (node) { return newNodes.indexOf(node) === -1 }),
@@ -115,9 +116,14 @@ function updateData(selectedNode) {
     }
     diff.removed.forEach(function (node) { nodes.splice(nodes.indexOf(node), 1) })
     diff.added.forEach(function (node) { nodes.push(node) })
-    links = baseLinks.filter(function (link) {
-        return link.target.id === selectedNode.id || link.source.id === selectedNode.id
+
+    removedLinks = baseLinks.filter(function (link) {
+        return nodes.indexOf(link.target) === -1 || nodes.indexOf(link.source) === -1
     })
+    removedLinks.forEach(function(link) {
+        baseLinks.splice(baseLinks.indexOf(link),1)
+    });
+    links = [...baseLinks]
 }
 function updateGraph() {
     // links
@@ -217,73 +223,74 @@ function addPacket(data) {
     for (x = 0; x < baseNodes.length; x++){
         if (baseNodes[x].id === data.ip.src){
             found = true;
+            var node1 = baseNodes[x];
+            baseNodes[x].level = data.level;
+            baseNodes[x].group = data.group;
             baseNodes[x].expiration = data.expiration;
             break;
         }
     }
     //if it isn't push this into nodes
     if(!found){
-        var newNode = { "id": data.ip.src, "label": data.ip.src, "level": 1, "group": 0, "expiration" : data.expiration};
-        baseNodes.push(newNode)
+        var node1 = { "id": data.ip.src, "label": data.ip.src, "level": data.level, "group": data.group, "expiration" : data.expiration};
+        baseNodes.push(node1)
     }
     // How to check if it is in json list
     found = false;
     for (x = 0; x < baseNodes.length; x++){
         if (baseNodes[x].id === data.ip.dst){
             found = true;
+            baseNodes[x].level = data.leveldst;
+            baseNodes[x].group = data.groupdst;
+            baseNodes[x].expiration = data.expirationdst;
+            var node2 = baseNodes[x];
             break;
         }
     }
     //if it isn't push this into nodes
     if(!found){
-        var newNode = { "id": data.ip.dst, "label": data.ip.dst, "level": 1, "group": 0 };
-        baseNodes.push(newNode)
+        var node2 = { "id": data.ip.dst, "label": data.ip.dst, "level": data.leveldst, "group": data.groupdst, "expiration" : data.expirationdst};
+        baseNodes.push(node2)
     }
     found = false
     //check if link is established
     for (x = 0; x < baseLinks.length; x++){
-        if (baseLinks[x].source === data.ip.src && baseLinks[x].target === data.ip.dst){
+        if (baseLinks[x].source.id === data.ip.src && baseLinks[x].target.id === data.ip.dst){
             found = true
             break
         }
     }
     if (!found){
         //add and update if not
-        baseLinks.push({"source" : data.ip.src, "target": data.ip.dst, "strength":  .1});
+        baseLinks.push({"source" : node1, "target": node2, "strength":  data.strength});
     }
     //otherwise graph doesn't need to change
 }
 
-function processTick(){
+function wait(ms){
+    return new Promise(r => setTimeout(r,ms));
+}
+
+async function processTick(){
+    while (true){
     //Update expiration time
     // -1 is never expire
-    console.log("I'm alive")
     var x = baseNodes.length
     while(x--){
         if (baseNodes[x].expiration != -1 && !isNaN(baseNodes[x].expiration) ){
         baseNodes[x].expiration -= tickValue/1000
             if (baseNodes[x].expiration < 0){
-                var i = baseLinks.length;
-                while(i--){
-                    if (baseLinks[i].source.id === baseNodes[x].id || baseLinks[i].target.id === baseNodes[x].id){
-                        baseLinks.splice(i,i)
-                    }
-                }
-                console.log("Node")
-                console.log(JSON.parse(JSON.stringify(baseNodes[x])))
-                console.log("Before")
-                console.log(JSON.parse(JSON.stringify(baseNodes)))
                 baseNodes.splice(x,x)
-                console.log("After")
-                console.log(JSON.parse(JSON.stringify(baseNodes)))
             }
         }
     }
 
 
     //Update the graph
-    updateSimulation()
+    updateData();
+    updateSimulation();
+    await wait(tickValue)
+    }
 }
 
 processTick()
-setInterval(processTick, tickValue);
