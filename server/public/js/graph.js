@@ -1,8 +1,15 @@
 ﻿//Update on websocket data
 
-var tickValue = 15000
-var severityForAlert = 7
+//If your frontend is lagging terrible (or you just want slower updates)
+//Increase this value (is in ms)
+var tickValue = 2000
 
+//Rule severity level that triggers alerts
+var severityForAlert = 7
+var recentRuleTriggers = []
+
+//How often to clear the alert refire block
+var clearRecentRules = 10000
 
 var baseNodes = [
 ]
@@ -191,33 +198,34 @@ updateSimulation()
 
 var socket = new WebSocket("ws://" + window.location.host + "/ws/webapp");
 socket.onopen = function (evt) {
-    console.log('connection opened');
+    alertify.success('Connected to Log Server');
 }
 socket.onerror = function (evt) {
-    console.log("connection error");
+    console.error("Connection Error");
 }
 socket.onmessage = function (evt) {
     var p = evt.data;
     addPacket(JSON.parse(p));
 }
 socket.onclose = function (evt) {
-    console.log("connection closed");
+    alertify.message("Connection Closed");
 }
 
-/*
-     "nodes": [
-    {
-      "id": "IPADDR",
-      "group": 1
-    },
-    "links": [
-    {
-    "source": "IPSOURCE",
-        "target": "IPDEST",
-            "value": 1
-    }
-*/
 function addPacket(data) {
+
+    if (data.severity >= severityForAlert){
+        var found = false
+        for(var x = 0; x < recentRuleTriggers.length; x++){
+           if (recentRuleTriggers[x].rulename  === data.rulename && recentRuleTriggers[x].trigger === data.trigger){
+                found = true
+           }
+        }
+        if(!found){
+            recentRuleTriggers.push({rulename: data.rulename, trigger: data.trigger})
+            alertify.warning('ALERT ON RULE: '+ data.rulename+ '. ON TRIGGER: '+  data.trigger);
+        }
+    }
+
     // How to check if it is in json list
     found = false;
     for (x = 0; x < baseNodes.length; x++){
@@ -294,3 +302,8 @@ async function processTick(){
 }
 
 processTick()
+
+setInterval(function(){
+    recentRuleTriggers = []
+}, clearRecentRules);
+
