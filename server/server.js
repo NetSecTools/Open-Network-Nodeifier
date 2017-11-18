@@ -35,17 +35,22 @@ server.on('upgrade', (request, socket, head) => {
                 returnedRules = []
 
                 //Preprocess
-                ruleIpDst = ipRuleProcessing(data.ip.dst, rules.dstip)
-                returnedRules.push(ruleIpDst)
+                //This should never be a problem, but to be safe
+                if (data.ip !== undefined){
+                    ruleIpDst = ipRuleProcessing(data.ip.dst, rules.dstip)
+                    returnedRules.push(ruleIpDst)
 
-                ruleIpSrc = ipRuleProcessing(data.ip.src, rules.srcip)
-                returnedRules.push(ruleIpSrc)
+                    ruleIpSrc = ipRuleProcessing(data.ip.src, rules.srcip)
+                    returnedRules.push(ruleIpSrc)
+                }
 
-                ruleDstPort = portRuleProcessing(data.transport.dst, rules.dstport)
-                returnedRules.push(ruleDstPort)
+                if (data.transport !== undefined){
+                    ruleDstPort = portRuleProcessing(data.transport.dst, rules.dstport)
+                    returnedRules.push(ruleDstPort)
 
-                ruleSrcPort = portRuleProcessing(data.transport.src, rules.srcport)
-                returnedRules.push(ruleSrcPort)
+                    ruleSrcPort = portRuleProcessing(data.transport.src, rules.srcport)
+                    returnedRules.push(ruleSrcPort)
+                }
 
                 //Get highest severity rule
                 var highSev = Math.max.apply(Math,returnedRules.map(function(o){if(o === undefined){

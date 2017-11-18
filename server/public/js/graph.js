@@ -36,7 +36,16 @@ function getNodeColor(node, neighbors) {
     if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
         return node.level === 1 ? 'blue' : 'green'
     }
-    return node.level === 1 ? 'red' : 'gray'
+    switch(node.group){
+        case 0:
+            return 'gray'
+        case 1:
+            return 'black'
+        case 2:
+            return 'yellow'
+        case 3:
+            return 'red'
+    }
 }
 function getLinkColor(node, link) {
     return isNeighborLink(node, link) ? 'green' : '#E5E5E5'
@@ -152,7 +161,7 @@ function updateGraph() {
         .enter()
         .append('circle')
         .attr('r', 10)
-        .attr('fill', function (node) { return node.level === 1 ? 'red' : 'gray' })
+        .attr('fill', function (node) { return getNodeColor(node, undefined) })
         .call(dragDrop)
         // we link the selectNode method here
         // to update the graph on every click
@@ -190,6 +199,7 @@ function updateSimulation() {
             .attr('y2', function (link) { return link.target.y })
     })
     simulation.force('link').links(links)
+
     simulation.alphaTarget(0.7).restart()
 }
 // last but not least, we call updateSimulation
