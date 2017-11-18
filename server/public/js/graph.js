@@ -1,33 +1,19 @@
 ﻿//Update on websocket data
 
+//If your frontend is lagging terrible (or you just want slower updates)
+//Increase this value (is in ms)
+var tickValue = 2000
+
+//Rule severity level that triggers alerts
+var severityForAlert = 7
+var recentRuleTriggers = []
+
+//How often to clear the alert refire block
+var clearRecentRules = 10000
+
 var baseNodes = [
-    { id: "mammal", group: 0, label: "Mammals", level: 1 },
-    { id: "dog", group: 0, label: "Dogs", level: 2 },
-    { id: "cat", group: 0, label: "Cats", level: 2 },
-    { id: "fox", group: 0, label: "Foxes", level: 2 },
-    { id: "elk", group: 0, label: "Elk", level: 2 },
-    { id: "insect", group: 1, label: "Insects", level: 1 },
-    { id: "ant", group: 1, label: "Ants", level: 2 },
-    { id: "bee", group: 1, label: "Bees", level: 2 },
-    { id: "fish", group: 2, label: "Fish", level: 1 },
-    { id: "carp", group: 2, label: "Carp", level: 2 },
-    { id: "pike", group: 2, label: "Pikes", level: 2 }
 ]
 var baseLinks = [
-    { target: "mammal", source: "dog", strength: 0.7 },
-    { target: "mammal", source: "cat", strength: 0.7 },
-    { target: "mammal", source: "fox", strength: 0.7 },
-    { target: "mammal", source: "elk", strength: 0.7 },
-    { target: "insect", source: "ant", strength: 0.7 },
-    { target: "insect", source: "bee", strength: 0.7 },
-    { target: "fish", source: "carp", strength: 0.7 },
-    { target: "fish", source: "pike", strength: 0.7 },
-    { target: "cat", source: "elk", strength: 0.1 },
-    { target: "carp", source: "ant", strength: 0.1 },
-    { target: "elk", source: "bee", strength: 0.1 },
-    { target: "dog", source: "cat", strength: 0.1 },
-    { target: "fox", source: "ant", strength: 0.1 },
-    { target: "pike", source: "cat", strength: 0.1 }
 ]
 var nodes = [...baseNodes]
 var links = [...baseLinks]
@@ -50,7 +36,16 @@ function getNodeColor(node, neighbors) {
     if (Array.isArray(neighbors) && neighbors.indexOf(node.id) > -1) {
         return node.level === 1 ? 'blue' : 'green'
     }
-    return node.level === 1 ? 'red' : 'gray'
+    switch(node.group){
+        case 0:
+            return 'gray'
+        case 1:
+            return 'black'
+        case 2:
+            return 'yellow'
+        case 3:
+            return 'red'
+    }
 }
 function getLinkColor(node, link) {
     return isNeighborLink(node, link) ? 'green' : '#E5E5E5'
@@ -80,8 +75,9 @@ var linkForce = d3
 var simulation = d3
     .forceSimulation()
     .force('link', linkForce)
-    .force('charge', d3.forceManyBody().strength(-120))
-    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('charge', d3.forceManyBody().strength(-600))
+    .force('centerX', d3.forceX(width / 2))
+    .force('centerY', d3.forceY(height /2))
 var dragDrop = d3.drag().on('start', function (node) {
     node.fx = node.x
     node.fy = node.y
@@ -93,8 +89,8 @@ var dragDrop = d3.drag().on('start', function (node) {
     if (!d3.event.active) {
         simulation.alphaTarget(0)
     }
-    node.fx = null
-    node.fy = null
+    node.fx = node.x
+    node.fy = node.y
 })
 // select node is called on every click
 // we either update the data according to the selection
@@ -106,7 +102,6 @@ function selectNode(selectedNode) {
         updateSimulation()
     } else {
         selectedId = selectedNode.id
-        updateData(selectedNode)
         updateSimulation()
     }
     var neighbors = getNeighbors(selectedNode)
@@ -127,10 +122,9 @@ function resetData() {
     links = baseLinks
 }
 // diffing and mutating the data
-function updateData(selectedNode) {
-    var neighbors = getNeighbors(selectedNode)
+function updateData() {
     var newNodes = baseNodes.filter(function (node) {
-        return neighbors.indexOf(node.id) > -1 || node.level === 1
+        return nodes.indexOf(node.id) === -1
     })
     var diff = {
         removed: nodes.filter(function (node) { return newNodes.indexOf(node) === -1 }),
@@ -138,9 +132,14 @@ function updateData(selectedNode) {
     }
     diff.removed.forEach(function (node) { nodes.splice(nodes.indexOf(node), 1) })
     diff.added.forEach(function (node) { nodes.push(node) })
-    links = baseLinks.filter(function (link) {
-        return link.target.id === selectedNode.id || link.source.id === selectedNode.id
+
+    removedLinks = baseLinks.filter(function (link) {
+        return nodes.indexOf(link.target) === -1 || nodes.indexOf(link.source) === -1
     })
+    removedLinks.forEach(function(link) {
+        baseLinks.splice(baseLinks.indexOf(link),1)
+    });
+    links = [...baseLinks]
 }
 function updateGraph() {
     // links
@@ -162,7 +161,7 @@ function updateGraph() {
         .enter()
         .append('circle')
         .attr('r', 10)
-        .attr('fill', function (node) { return node.level === 1 ? 'red' : 'gray' })
+        .attr('fill', function (node) { return getNodeColor(node, undefined) })
         .call(dragDrop)
         // we link the selectNode method here
         // to update the graph on every click
@@ -182,6 +181,9 @@ function updateGraph() {
     textElements = textEnter.merge(textElements)
 }
 function updateSimulation() {
+    nodes = [...baseNodes]
+    links = [...baseLinks]
+
     updateGraph()
     simulation.nodes(nodes).on('tick', () => {
         nodeElements
@@ -197,6 +199,7 @@ function updateSimulation() {
             .attr('y2', function (link) { return link.target.y })
     })
     simulation.force('link').links(links)
+
     simulation.alphaTarget(0.7).restart()
 }
 // last but not least, we call updateSimulation
@@ -205,39 +208,112 @@ updateSimulation()
 
 var socket = new WebSocket("ws://" + window.location.host + "/ws/webapp");
 socket.onopen = function (evt) {
-    console.log('connection opened');
+    alertify.success('Connected to Log Server');
 }
 socket.onerror = function (evt) {
-    console.log("connection error");
+    console.error("Connection Error");
 }
 socket.onmessage = function (evt) {
     var p = evt.data;
     addPacket(JSON.parse(p));
 }
 socket.onclose = function (evt) {
-    console.log("connection closed");
+    alertify.message("Connection Closed");
 }
 
-/*
-     "nodes": [
-    {
-      "id": "IPADDR",
-      "group": 1
-    },
-    "links": [  
-    {
-    "source": "IPSOURCE",
-        "target": "IPDEST",
-            "value": 1
-    }
-*/
 function addPacket(data) {
-    console.log(data)
-    // How to check if it is in json list   
-    //if it isn't push this into nodes
-    nodes.push({ "id": data.sourceip, "group": 1 })
-    //check if link is established
-    //add and update if not
-    //otherwise graph doesn't need to change
 
+    if (data.severity >= severityForAlert){
+        var found = false
+        for(var x = 0; x < recentRuleTriggers.length; x++){
+           if (recentRuleTriggers[x].rulename  === data.rulename && recentRuleTriggers[x].trigger === data.trigger){
+                found = true
+           }
+        }
+        if(!found){
+            recentRuleTriggers.push({rulename: data.rulename, trigger: data.trigger})
+            alertify.warning('ALERT ON RULE: '+ data.rulename+ '. ON TRIGGER: '+  data.trigger);
+        }
+    }
+
+    // How to check if it is in json list
+    found = false;
+    for (x = 0; x < baseNodes.length; x++){
+        if (baseNodes[x].id === data.ip.src){
+            found = true;
+            var node1 = baseNodes[x];
+            baseNodes[x].level = data.level;
+            baseNodes[x].group = data.group;
+            baseNodes[x].expiration = data.expiration;
+            break;
+        }
+    }
+    //if it isn't push this into nodes
+    if(!found){
+        var node1 = { "id": data.ip.src, "label": data.ip.src, "level": data.level, "group": data.group, "expiration" : data.expiration};
+        baseNodes.push(node1)
+    }
+    // How to check if it is in json list
+    found = false;
+    for (x = 0; x < baseNodes.length; x++){
+        if (baseNodes[x].id === data.ip.dst){
+            found = true;
+            baseNodes[x].level = data.leveldst;
+            baseNodes[x].group = data.groupdst;
+            baseNodes[x].expiration = data.expirationdst;
+            var node2 = baseNodes[x];
+            break;
+        }
+    }
+    //if it isn't push this into nodes
+    if(!found){
+        var node2 = { "id": data.ip.dst, "label": data.ip.dst, "level": data.leveldst, "group": data.groupdst, "expiration" : data.expirationdst};
+        baseNodes.push(node2)
+    }
+    found = false
+    //check if link is established
+    for (x = 0; x < baseLinks.length; x++){
+        if (baseLinks[x].source.id === data.ip.src && baseLinks[x].target.id === data.ip.dst){
+            found = true
+            break
+        }
+    }
+    if (!found){
+        //add and update if not
+        baseLinks.push({"source" : node1, "target": node2, "strength":  data.strength});
+    }
+    //otherwise graph doesn't need to change
 }
+
+function wait(ms){
+    return new Promise(r => setTimeout(r,ms));
+}
+
+async function processTick(){
+    while (true){
+    //Update expiration time
+    // -1 is never expire
+    var x = baseNodes.length
+    while(x--){
+        if (baseNodes[x].expiration != -1 && !isNaN(baseNodes[x].expiration) ){
+        baseNodes[x].expiration -= tickValue/1000
+            if (baseNodes[x].expiration < 0){
+                baseNodes.splice(x,x)
+            }
+        }
+    }
+
+
+    //Update the graph
+    updateData();
+    updateSimulation();
+    await wait(tickValue)
+    }
+}
+
+processTick()
+
+setInterval(function(){
+    recentRuleTriggers = []
+}, clearRecentRules);
+
