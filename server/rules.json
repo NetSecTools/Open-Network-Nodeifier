@@ -1,0 +1,28 @@
+{
+ "dstip": [
+     {
+        "name": "This is me",
+        "triggerMessage": "INCOMING!!",
+        "startip": "192.168.1.126",
+        "endip": "192.168.1.126",
+        "group": 1,
+        "expiration": 100,
+        "severity": 7
+     },
+     {
+        "name": "This is my subnet",
+        "triggerMessage": "Friends!",
+        "startip": "192.168.1.0",
+        "endip": "192.168.1.255",
+        "group": 1,
+        "expiration": 60,
+        "severity": 3
+     }
+ ],
+ "dstport":[
+ ],
+ "srcip": [
+ ],
+ "srcport": [
+ ]
+}
